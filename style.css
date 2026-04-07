@@ -1,110 +1,173 @@
 :root {
-    --primary: #4F46E5;
-    --bg: #F3F4F6;
-    --card: #FFFFFF;
-    --text: #1F2937;
-    --border: #E5E7EB;
+    --ios-blue: #007AFF;
+    --ios-bg: #F2F2F7;
+    --ios-text: #1C1C1E;
+    --ios-gray: #8E8E93;
+    --ios-red: #FF3B30;
+    --glass-bg: rgba(255, 255, 255, 0.65);
+    --glass-border: rgba(255, 255, 255, 0.4);
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background-color: var(--bg);
-    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+    background-color: var(--ios-bg);
+    color: var(--ios-text);
     margin: 0;
-    padding: 20px;
+    padding: 0;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
 }
 
-.screen { display: none; }
-.screen.active { display: block; max-width: 600px; margin: 0 auto; }
+/* Latar Belakang Pastel Blur */
+.blob {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(60px);
+    z-index: -1;
+    opacity: 0.7;
+}
+.blob-1 { top: -10%; left: -10%; width: 350px; height: 350px; background: #FFD1FF; } /* Pink pastel */
+.blob-2 { bottom: -10%; right: -10%; width: 400px; height: 400px; background: #D1E8FF; } /* Biru pastel */
+.blob-3 { top: 40%; left: 50%; width: 250px; height: 250px; background: #E2D1FF; transform: translate(-50%, -50%); } /* Ungu pastel */
+
+.app-container {
+    padding: 20px;
+    max-width: 600px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+}
+
+.screen { display: none; animation: fadeIn 0.3s ease; }
+.screen.active { display: block; }
 .hidden { display: none !important; }
 
-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-button {
-    background-color: var(--primary);
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 14px;
-}
-button.secondary { background-color: #9CA3AF; }
-button.danger { background-color: #EF4444; }
+/* Header & Tipografi */
+.header-ios { text-align: center; margin-bottom: 30px; margin-top: 20px; }
+.header-ios h2 { margin: 0; font-size: 28px; font-weight: 700; }
+.header-ios p { margin: 5px 0 0 0; color: var(--ios-gray); }
 
-input[type="text"], input[type="number"], input[type="password"] {
-    padding: 10px;
-    font-size: 16px;
-    width: 100%;
-    margin-bottom: 10px;
-    box-sizing: border-box;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-}
+.main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; margin-top: 10px;}
+.main-header h2 { margin: 0; font-size: 28px; font-weight: 700; }
+.section-title { font-size: 18px; font-weight: 600; margin-bottom: 12px; margin-left: 5px; color: var(--ios-text); }
 
-.card-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 8px;
-}
-
-.card {
-    background-color: var(--card);
-    padding: 12px;
-    border-radius: 8px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border: 1px solid var(--border);
-}
-
-.balance-card {
-    background-color: var(--primary);
-    color: white;
-    padding: 20px;
-    border-radius: 8px;
-    text-align: center;
-    margin-bottom: 20px;
-}
-.balance-card h1 { margin: 10px 0 0 0; font-size: 36px; }
-
-/* Gaya Menu Lipat (Accordion) */
-details {
-    background: var(--card);
-    border-radius: 8px;
-    margin-bottom: 10px;
-    border: 1px solid var(--border);
+/* Glassmorphism Panel (Kaca Buram) */
+.glass-panel, .card, details {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
     overflow: hidden;
 }
+
+.glass-panel { padding: 20px; }
+.card-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+
+/* Komponen Kartu */
+.card {
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: transform 0.2s;
+}
+.card-info { display: flex; align-items: center; gap: 12px; }
+.card-icon { font-size: 24px; color: var(--ios-blue); background: rgba(0, 122, 255, 0.1); padding: 8px; border-radius: 12px;}
+.card-text strong { display: block; font-size: 16px; margin-bottom: 4px; }
+.card-text small { color: var(--ios-gray); font-size: 14px; font-weight: 500; }
+
+/* Kartu Saldo (Apple Wallet Style) */
+.wallet-card {
+    background: linear-gradient(135deg, #A2B2EE 0%, #E3B5E8 100%);
+    color: white;
+    padding: 25px;
+    border-radius: 20px;
+    margin-bottom: 25px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 20px rgba(162, 178, 238, 0.4);
+}
+.wallet-card p { margin: 0; font-size: 15px; opacity: 0.9; font-weight: 500; }
+.wallet-card h1 { margin: 5px 0 0 0; font-size: 42px; font-weight: 700; letter-spacing: 1px; }
+.wallet-icon { position: absolute; right: -20px; bottom: -20px; font-size: 120px; opacity: 0.15; }
+
+/* Menu Lipat iOS */
+details { margin-bottom: 12px; }
 summary {
-    padding: 15px;
-    font-weight: bold;
+    padding: 16px;
+    font-weight: 600;
+    font-size: 16px;
     cursor: pointer;
-    background: #F9FAFB;
     list-style: none;
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    background: rgba(255,255,255,0.4);
 }
 summary::-webkit-details-marker { display: none; }
-summary::after { content: "▼"; font-size: 12px; color: #6B7280; }
-details[open] summary::after { content: "▲"; }
-.details-content {
-    padding: 15px;
-    background: var(--card);
-    border-top: 1px solid var(--border);
-}
+summary::after { content: "\2304"; font-size: 20px; color: var(--ios-gray); transition: transform 0.3s;}
+details[open] summary::after { transform: rotate(180deg); }
+.details-content { padding: 16px; background: rgba(255,255,255,0.2); border-top: 1px solid var(--glass-border); }
 
-/* Navigasi Admin */
-.admin-nav {
+/* Tombol */
+button {
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+button:active { transform: scale(0.95); opacity: 0.8; }
+.primary-btn { background: var(--ios-blue); color: white; width: 100%; margin-bottom: 10px; padding: 14px;}
+.secondary-btn { background: #E5E5EA; color: var(--ios-text); width: 100%; padding: 14px;}
+.card button { background: #E5E5EA; color: var(--ios-blue); padding: 8px 14px; font-size: 14px; }
+.card button.danger { background: #FFD4D4; color: var(--ios-red); }
+.icon-btn { background: var(--glass-bg); color: var(--ios-text); border: 1px solid var(--glass-border); padding: 10px; border-radius: 50%; font-size: 20px;}
+
+/* Input Form */
+input[type="text"], input[type="number"], input[type="password"] {
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid var(--glass-border);
+    padding: 14px;
+    font-size: 16px;
+    width: 100%;
+    margin-bottom: 12px;
+    box-sizing: border-box;
+    border-radius: 12px;
+    outline: none;
+    transition: background 0.3s;
+}
+input:focus { background: rgba(255, 255, 255, 0.9); border-color: var(--ios-blue); }
+
+/* Segmented Control (Tab Admin) */
+.segmented-control {
     display: flex;
-    gap: 10px;
+    background: rgba(118, 118, 128, 0.12);
+    border-radius: 9px;
+    padding: 3px;
     margin-bottom: 20px;
 }
-.admin-nav button { flex: 1; }
+.segmented-control button {
+    flex: 1;
+    background: transparent;
+    color: var(--ios-text);
+    border-radius: 7px;
+    padding: 8px;
+    font-size: 14px;
+    font-weight: 500;
+}
+.segmented-control button.active {
+    background: white;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+    font-weight: 600;
+}
