@@ -19,8 +19,8 @@ let usersData = [];
 
 // ================= DATA AWAL =================
 const initialUsers = [
-    { id: "u1", name: "Ayah Qori", role: "admin", pin: "1111", points: 0 },
-    { id: "u2", name: "Ibu Ririn", role: "admin", pin: "2222", points: 0 },
+    { id: "u1", name: "Abi", role: "admin", pin: "3108", points: 0 },
+    { id: "u2", name: "Ummi", role: "admin", pin: "3108", points: 0 },
     { id: "u3", name: "Zafira", role: "member", pin: "3333", points: 0 },
     { id: "u4", name: "Kaivan", role: "member", pin: "4444", points: 0 }
 ];
