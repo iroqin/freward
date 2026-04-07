@@ -9,8 +9,7 @@
 <body>
     <div id="login-screen" class="screen active">
         <h2>Masuk</h2>
-        <div id="user-selection" class="card-grid">
-            </div>
+        <div id="user-selection" class="card-grid"></div>
         <div id="pin-section" class="hidden">
             <h3 id="login-name"></h3>
             <input type="password" id="pin-input" placeholder="Masukkan PIN 4 Digit" maxlength="4">
@@ -26,8 +25,36 @@
         </header>
 
         <div id="admin-view" class="hidden">
-            <h3>Persetujuan Tugas Tertunda</h3>
-            <div id="pending-tasks-list"></div>
+            <div class="admin-nav">
+                <button id="btn-tab-approval" onclick="switchAdminTab('approval')">Persetujuan</button>
+                <button id="btn-tab-manage" class="secondary" onclick="switchAdminTab('manage')">Kelola Data</button>
+            </div>
+
+            <div id="admin-approval-section">
+                <h3>Tugas Menunggu Persetujuan</h3>
+                <div id="pending-tasks-list" class="card-grid"></div>
+            </div>
+
+            <div id="admin-manage-section" class="hidden">
+                <h3>Tambah Tugas Baru</h3>
+                <div class="card-grid" style="margin-bottom:20px;">
+                    <input type="text" id="new-task-name" placeholder="Nama Tugas">
+                    <input type="number" id="new-task-points" placeholder="Poin">
+                    <input type="text" id="new-task-category" placeholder="Kategori (mis: A - Kamar)">
+                    <button onclick="addNewTask()">+ Tambah Tugas</button>
+                </div>
+
+                <h3>Tambah Hadiah Baru</h3>
+                <div class="card-grid" style="margin-bottom:20px;">
+                    <input type="text" id="new-reward-name" placeholder="Nama Hadiah">
+                    <input type="number" id="new-reward-points" placeholder="Harga Poin">
+                    <input type="text" id="new-reward-tier" placeholder="Tier (mis: Tier 1)">
+                    <button onclick="addNewReward()">+ Tambah Hadiah</button>
+                </div>
+
+                <h3>Katalog Saat Ini (Edit/Hapus)</h3>
+                <div id="admin-catalog-list"></div>
+            </div>
         </div>
 
         <div id="member-view" class="hidden">
@@ -37,10 +64,10 @@
             </div>
             
             <h3>Tugas Tersedia</h3>
-            <div id="tasks-list" class="card-grid"></div>
+            <div id="tasks-list"></div>
 
-            <h3>Katalog Hadiah</h3>
-            <div id="rewards-list" class="card-grid"></div>
+            <h3 style="margin-top: 30px;">Katalog Hadiah</h3>
+            <div id="rewards-list"></div>
         </div>
     </div>
 
