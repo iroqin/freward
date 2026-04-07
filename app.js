@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getFirestore, collection, getDocs, getDoc, doc, setDoc, addDoc, updateDoc, deleteDoc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-// KONFIGURASI FIREBASE ANDA - GANTI DENGAN MILIK ANDA
+// !!! GANTI DENGAN KONFIGURASI FIREBASE ANDA !!!
 const firebaseConfig = {
   apiKey: "AIzaSyBcG-UedQ9QVdznMPJIA-0YrJGHPEPBDSA",
   authDomain: "freward-119b2.firebaseapp.com",
@@ -17,11 +17,55 @@ const db = getFirestore(app);
 let currentUser = null;
 let usersData = [];
 
-// Fungsi memilih ikon otomatis bergaya iOS berdasarkan kategori
+// ================= DATA AWAL =================
+const initialUsers = [
+    { id: "u1", name: "Ayah Qori", role: "admin", pin: "1111", points: 0 },
+    { id: "u2", name: "Ibu Ririn", role: "admin", pin: "2222", points: 0 },
+    { id: "u3", name: "Zafira", role: "member", pin: "3333", points: 0 },
+    { id: "u4", name: "Kaivan", role: "member", pin: "4444", points: 0 }
+];
+
+const initialTasks = [
+    { id: "T1", name: "Rapikan kasur, selimut & bantal", points: 5, category: "Pekerjaan Rumah Tangga" },
+    { id: "T2", name: "Lap meja makan", points: 3, category: "Pekerjaan Rumah Tangga" },
+    { id: "T3", name: "Rapikan meja belajar", points: 5, category: "Pekerjaan Rumah Tangga" },
+    { id: "T4", name: "Cuci gelas & piring milik sendiri", points: 3, category: "Pekerjaan Rumah Tangga" },
+    { id: "T5", name: "Lap cermin wastafel", points: 5, category: "Pekerjaan Rumah Tangga" },
+    { id: "T6", name: "Rapikan barang berserakan di ruang tamu", points: 5, category: "Pekerjaan Rumah Tangga" },
+    { id: "T7", name: "Buang sampah", points: 6, category: "Pekerjaan Rumah Tangga" },
+    { id: "T8", name: "Sapu ruang tamu / 1 ruangan", points: 6, category: "Pekerjaan Rumah Tangga" },
+    { id: "T9", name: "Pel 1 ruangan", points: 10, category: "Pekerjaan Rumah Tangga" },
+    { id: "T10", name: "Cuci piring keluarga 1x makan", points: 15, category: "Pekerjaan Rumah Tangga" },
+    { id: "T11", name: "Sapu seluruh rumah", points: 18, category: "Pekerjaan Rumah Tangga" },
+    { id: "T12", name: "Pel seluruh rumah", points: 20, category: "Pekerjaan Rumah Tangga" },
+    { id: "T13", name: "Bersihkan kamar mandi lengkap", points: 25, category: "Pekerjaan Rumah Tangga" },
+    { id: "T14", name: "Membaca buku 30 menit", points: 15, category: "Akademik & Pengembangan Diri" },
+    { id: "T15", name: "Membaca buku 1 jam", points: 30, category: "Akademik & Pengembangan Diri" },
+    { id: "T16", name: "Belajar mandiri 30 menit (tanpa disuruh)", points: 15, category: "Akademik & Pengembangan Diri" },
+    { id: "T17", name: "Belajar mandiri 1 jam (tanpa disuruh)", points: 30, category: "Akademik & Pengembangan Diri" },
+    { id: "T18", name: "Berenang 1 jam", points: 50, category: "Akademik & Pengembangan Diri" },
+    { id: "T19", name: "Jogging 1 Jam", points: 30, category: "Akademik & Pengembangan Diri" },
+    { id: "T20", name: "Exercise 15 menit", points: 10, category: "Akademik & Pengembangan Diri" },
+    { id: "T21", name: "Belajar alat musik 30 menit", points: 15, category: "Akademik & Pengembangan Diri" },
+    { id: "T22", name: "Nilai ulangan 95-100", points: 20, category: "Bonus Akademik" }
+];
+
+const initialRewards = [
+    { id: "R1", name: "Nonton YouTube 30 menit", points: 20, tier: "Screen Time" },
+    { id: "R2", name: "Main game 30 menit", points: 25, tier: "Screen Time" },
+    { id: "R3", name: "Coding 30 menit", points: 15, tier: "Screen Time" },
+    { id: "R4", name: "Snack / jajan pilihan sendiri (< Rp 15rb)", points: 50, tier: "Makanan & Jajan" },
+    { id: "R5", name: "Jajan agak besar (Rp 15–30rb)", points: 100, tier: "Makanan & Jajan" },
+    { id: "R6", name: "Mainan kecil (< Rp 50rb)", points: 500, tier: "Hadiah Fisik" },
+    { id: "R7", name: "Mainan sedang (Rp 50–150rb)", points: 1000, tier: "Hadiah Fisik" },
+    { id: "R8", name: "Mainan besar / wishlist (Rp 150–300rb)", points: 1500, tier: "Hadiah Fisik" }
+];
+
+// ================= LOGIKA UTAMA =================
 function getIconForCategory(category) {
     const cat = category.toLowerCase();
     if (cat.includes('rumah')) return 'home-outline';
-    if (cat.includes('akademik') || cat.includes('belajar')) return 'book-outline';
+    if (cat.includes('akademik') || cat.includes('belajar') || cat.includes('diri')) return 'book-outline';
     if (cat.includes('screen')) return 'tv-outline';
     if (cat.includes('makanan') || cat.includes('jajan')) return 'fast-food-outline';
     if (cat.includes('fisik') || cat.includes('mainan')) return 'game-controller-outline';
@@ -37,10 +81,25 @@ function groupBy(array, key) {
 }
 
 async function initApp() {
-    const usersSnapshot = await getDocs(collection(db, "users"));
-    usersData = [];
-    usersSnapshot.forEach((doc) => usersData.push({id: doc.id, ...doc.data()}));
-    renderUserSelection();
+    try {
+        const usersSnapshot = await getDocs(collection(db, "users"));
+        
+        // FUNGSI SEEDING DIKEMBALIKAN (Jika database kosong)
+        if (usersSnapshot.empty) {
+            for (const user of initialUsers) await setDoc(doc(db, "users", user.id), user);
+            for (const task of initialTasks) await setDoc(doc(db, "tasks", task.id), task);
+            for (const reward of initialRewards) await setDoc(doc(db, "rewards", reward.id), reward);
+            alert("Sistem berhasil disiapkan. Silakan muat ulang (refresh) halaman ini.");
+            return;
+        }
+
+        usersData = [];
+        usersSnapshot.forEach((doc) => usersData.push({id: doc.id, ...doc.data()}));
+        renderUserSelection();
+    } catch (error) {
+        console.error("Error mengambil data:", error);
+        alert("Gagal terhubung ke Database. Periksa kembali konfigurasi Firebase Anda di file app.js.");
+    }
 }
 
 function renderUserSelection() {
@@ -124,7 +183,6 @@ function loadDashboard() {
 }
 
 // ================= FITUR MEMBER (ANAK) =================
-
 function listenToUserPoints() {
     onSnapshot(doc(db, "users", currentUser.id), (docSnap) => {
         if(docSnap.exists()) document.getElementById("user-points").innerText = docSnap.data().points;
@@ -224,7 +282,6 @@ window.redeemReward = async function(rewardName, pointsCost) {
 };
 
 // ================= FITUR ADMIN =================
-
 window.switchAdminTab = function(tab) {
     if(tab === 'approval') {
         document.getElementById("admin-approval-section").classList.remove("hidden");
