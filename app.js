@@ -17,6 +17,62 @@ const db = getFirestore(app);
 let currentUser = null;
 let usersData = [];
 
+// Data Awal: Pengguna
+const initialUsers = [
+    { id: "u1", name: "Ayah Qori", role: "admin", pin: "1111", points: 0 },
+    { id: "u2", name: "Ibu Ririn", role: "admin", pin: "2222", points: 0 },
+    { id: "u3", name: "Zafira", role: "member", pin: "3333", points: 0 },
+    { id: "u4", name: "Kaivan", role: "member", pin: "4444", points: 0 }
+];
+
+// Data Awal: Katalog Tugas Baru
+const initialTasks = [
+    // Pekerjaan Rumah Tangga
+    { id: "T1", name: "Rapikan kasur, selimut & bantal", points: 5, category: "Pekerjaan Rumah Tangga" },
+    { id: "T2", name: "Lap meja makan", points: 3, category: "Pekerjaan Rumah Tangga" },
+    { id: "T3", name: "Rapikan meja belajar", points: 5, category: "Pekerjaan Rumah Tangga" },
+    { id: "T4", name: "Cuci gelas & piring milik sendiri", points: 3, category: "Pekerjaan Rumah Tangga" },
+    { id: "T5", name: "Lap cermin wastafel", points: 5, category: "Pekerjaan Rumah Tangga" },
+    { id: "T6", name: "Rapikan barang berserakan di ruang tamu", points: 5, category: "Pekerjaan Rumah Tangga" },
+    { id: "T7", name: "Buang sampah", points: 6, category: "Pekerjaan Rumah Tangga" },
+    { id: "T8", name: "Sapu ruang tamu / 1 ruangan", points: 6, category: "Pekerjaan Rumah Tangga" },
+    { id: "T9", name: "Pel 1 ruangan", points: 10, category: "Pekerjaan Rumah Tangga" },
+    { id: "T10", name: "Cuci piring keluarga 1x makan", points: 15, category: "Pekerjaan Rumah Tangga" },
+    { id: "T11", name: "Sapu seluruh rumah", points: 18, category: "Pekerjaan Rumah Tangga" },
+    { id: "T12", name: "Pel seluruh rumah", points: 20, category: "Pekerjaan Rumah Tangga" },
+    { id: "T13", name: "Bersihkan kamar mandi lengkap", points: 25, category: "Pekerjaan Rumah Tangga" },
+
+    // Akademik & Pengembangan Diri
+    { id: "T14", name: "Membaca buku 30 menit", points: 15, category: "Akademik & Pengembangan Diri" },
+    { id: "T15", name: "Membaca buku 1 jam", points: 30, category: "Akademik & Pengembangan Diri" },
+    { id: "T16", name: "Belajar mandiri 30 menit (tanpa disuruh)", points: 15, category: "Akademik & Pengembangan Diri" },
+    { id: "T17", name: "Belajar mandiri 1 jam (tanpa disuruh)", points: 30, category: "Akademik & Pengembangan Diri" },
+    { id: "T18", name: "Berenang 1 jam", points: 50, category: "Akademik & Pengembangan Diri" },
+    { id: "T19", name: "Jogging 1 Jam", points: 30, category: "Akademik & Pengembangan Diri" },
+    { id: "T20", name: "Exercise 15 menit", points: 10, category: "Akademik & Pengembangan Diri" },
+    { id: "T21", name: "Belajar alat musik 30 menit", points: 15, category: "Akademik & Pengembangan Diri" },
+
+    // Bonus Akademik
+    { id: "T22", name: "Nilai ulangan 95-100", points: 20, category: "Bonus Akademik" }
+];
+
+// Data Awal: Katalog Hadiah Baru
+const initialRewards = [
+    // Screen Time
+    { id: "R1", name: "Nonton YouTube 30 menit", points: 20, tier: "Screen Time" },
+    { id: "R2", name: "Main game 30 menit", points: 25, tier: "Screen Time" },
+    { id: "R3", name: "Coding 30 menit", points: 15, tier: "Screen Time" },
+    
+    // Makanan & Jajan
+    { id: "R4", name: "Snack / jajan pilihan sendiri (< Rp 15rb)", points: 50, tier: "Makanan & Jajan" },
+    { id: "R5", name: "Jajan agak besar (Rp 15–30rb)", points: 100, tier: "Makanan & Jajan" },
+    
+    // Hadiah Fisik (Menabung Poin)
+    { id: "R6", name: "Mainan kecil (< Rp 50rb)", points: 500, tier: "Hadiah Fisik" },
+    { id: "R7", name: "Mainan sedang (Rp 50–150rb)", points: 1000, tier: "Hadiah Fisik" },
+    { id: "R8", name: "Mainan besar / wishlist (Rp 150–300rb)", points: 1500, tier: "Hadiah Fisik" }
+];
+
 // Fungsi utilitas mengelompokkan data
 function groupBy(array, key) {
     return array.reduce((result, currentValue) => {
@@ -28,6 +84,22 @@ function groupBy(array, key) {
 
 async function initApp() {
     const usersSnapshot = await getDocs(collection(db, "users"));
+    
+    // Seed data jika database kosong
+    if (usersSnapshot.empty) {
+        for (const user of initialUsers) {
+            await setDoc(doc(db, "users", user.id), user);
+        }
+        for (const task of initialTasks) {
+            await setDoc(doc(db, "tasks", task.id), task);
+        }
+        for (const reward of initialRewards) {
+            await setDoc(doc(db, "rewards", reward.id), reward);
+        }
+        alert("Database diinisialisasi dengan data baru. Silakan muat ulang halaman.");
+        return;
+    }
+
     usersData = [];
     usersSnapshot.forEach((doc) => usersData.push({id: doc.id, ...doc.data()}));
     renderUserSelection();
@@ -102,19 +174,18 @@ function loadDashboard() {
 // ================= FITUR MEMBER (ANAK) =================
 
 function listenToUserPoints() {
-    onSnapshot(doc(db, "users", currentUser.id), (doc) => {
-        if(doc.exists()) document.getElementById("user-points").innerText = doc.data().points;
+    onSnapshot(doc(db, "users", currentUser.id), (docSnap) => {
+        if(docSnap.exists()) document.getElementById("user-points").innerText = docSnap.data().points;
     });
 }
 
 async function loadMemberTasksAndRewards() {
-    // Memuat Tugas berdasar Kategori (Accordion)
     const taskContainer = document.getElementById("tasks-list");
     taskContainer.innerHTML = "Memuat...";
     
     onSnapshot(collection(db, "tasks"), (snapshot) => {
         const tasks = [];
-        snapshot.forEach(doc => tasks.push({id: doc.id, ...doc.data()}));
+        snapshot.forEach(docSnap => tasks.push({id: docSnap.id, ...docSnap.data()}));
         const groupedTasks = groupBy(tasks, 'category');
         
         taskContainer.innerHTML = "";
@@ -132,13 +203,12 @@ async function loadMemberTasksAndRewards() {
         }
     });
 
-    // Memuat Hadiah berdasar Tier (Accordion)
     const rewardContainer = document.getElementById("rewards-list");
     rewardContainer.innerHTML = "Memuat...";
     
     onSnapshot(collection(db, "rewards"), (snapshot) => {
         const rewards = [];
-        snapshot.forEach(doc => rewards.push({id: doc.id, ...doc.data()}));
+        snapshot.forEach(docSnap => rewards.push({id: docSnap.id, ...docSnap.data()}));
         const groupedRewards = groupBy(rewards, 'tier');
         
         rewardContainer.innerHTML = "";
@@ -243,7 +313,6 @@ window.rejectTask = async function(logId) {
 
 function loadAdminCatalog() {
     const container = document.getElementById("admin-catalog-list");
-    // Gunakan onSnapshot agar langsung terbarui saat diedit
     onSnapshot(collection(db, "tasks"), (snapshot) => {
         container.innerHTML = "<h4>Daftar Tugas</h4>";
         snapshot.forEach(docSnap => {
