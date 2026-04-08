@@ -1,582 +1,922 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getFirestore, collection, getDocs, getDoc, doc, setDoc, addDoc, updateDoc, deleteDoc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sistem Reward Keluarga</title>
+    
+    <!-- Pustaka Ikon iOS -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBcG-UedQ9QVdznMPJIA-0YrJGHPEPBDSA",
-  authDomain: "freward-119b2.firebaseapp.com",
-  projectId: "freward-119b2",
-  storageBucket: "freward-119b2.firebasestorage.app",
-  messagingSenderId: "215497585199",
-  appId: "1:215497585199:web:b0c766cceb67ccc8814cda"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-let currentUser = null;
-let usersData = [];
-
-// ================= DATA AWAL =================
-const initialUsers = [
-    { id: "u1", name: "Abi", role: "admin", pin: "3108", points: 0 },
-    { id: "u2", name: "Ummi", role: "admin", pin: "3108", points: 0 },
-    { id: "u3", name: "Zafira", role: "member", pin: "3333", points: 0 },
-    { id: "u4", name: "Kaivan", role: "member", pin: "4444", points: 0 }
-];
-
-const initialTasks = [
-    { id: "T1", name: "Rapikan kasur, selimut & bantal", points: 5, category: "Pekerjaan Rumah Tangga" },
-    { id: "T2", name: "Lap meja makan", points: 3, category: "Pekerjaan Rumah Tangga" },
-    { id: "T3", name: "Rapikan meja belajar", points: 5, category: "Pekerjaan Rumah Tangga" },
-    { id: "T4", name: "Cuci gelas & piring milik sendiri", points: 3, category: "Pekerjaan Rumah Tangga" },
-    { id: "T5", name: "Lap cermin wastafel", points: 5, category: "Pekerjaan Rumah Tangga" },
-    { id: "T6", name: "Rapikan barang berserakan di ruang tamu", points: 5, category: "Pekerjaan Rumah Tangga" },
-    { id: "T7", name: "Buang sampah", points: 6, category: "Pekerjaan Rumah Tangga" },
-    { id: "T8", name: "Sapu ruang tamu / 1 ruangan", points: 6, category: "Pekerjaan Rumah Tangga" },
-    { id: "T9", name: "Pel 1 ruangan", points: 10, category: "Pekerjaan Rumah Tangga" },
-    { id: "T10", name: "Cuci piring keluarga 1x makan", points: 15, category: "Pekerjaan Rumah Tangga" },
-    { id: "T11", name: "Sapu seluruh rumah", points: 18, category: "Pekerjaan Rumah Tangga" },
-    { id: "T12", name: "Pel seluruh rumah", points: 20, category: "Pekerjaan Rumah Tangga" },
-    { id: "T13", name: "Bersihkan kamar mandi lengkap", points: 25, category: "Pekerjaan Rumah Tangga" },
-    { id: "T14", name: "Membaca buku 30 menit", points: 15, category: "Akademik & Pengembangan Diri" },
-    { id: "T15", name: "Membaca buku 1 jam", points: 30, category: "Akademik & Pengembangan Diri" },
-    { id: "T16", name: "Belajar mandiri 30 menit (tanpa disuruh)", points: 15, category: "Akademik & Pengembangan Diri" },
-    { id: "T17", name: "Belajar mandiri 1 jam (tanpa disuruh)", points: 30, category: "Akademik & Pengembangan Diri" },
-    { id: "T18", name: "Berenang 1 jam", points: 50, category: "Akademik & Pengembangan Diri" },
-    { id: "T19", name: "Jogging 1 Jam", points: 30, category: "Akademik & Pengembangan Diri" },
-    { id: "T20", name: "Exercise 15 menit", points: 10, category: "Akademik & Pengembangan Diri" },
-    { id: "T21", name: "Belajar alat musik 30 menit", points: 15, category: "Akademik & Pengembangan Diri" },
-    { id: "T22", name: "Nilai ulangan 95-100", points: 20, category: "Bonus Akademik" }
-];
-
-const initialRewards = [
-    { id: "R1", name: "Nonton YouTube 30 menit", points: 20, tier: "Screen Time" },
-    { id: "R2", name: "Main game 30 menit", points: 25, tier: "Screen Time" },
-    { id: "R3", name: "Coding 30 menit", points: 15, tier: "Screen Time" },
-    { id: "R4", name: "Snack / jajan pilihan sendiri (< Rp 15rb)", points: 50, tier: "Makanan & Jajan" },
-    { id: "R5", name: "Jajan agak besar (Rp 15–30rb)", points: 100, tier: "Makanan & Jajan" },
-    { id: "R6", name: "Mainan kecil (< Rp 50rb)", points: 500, tier: "Hadiah Fisik" },
-    { id: "R7", name: "Mainan sedang (Rp 50–150rb)", points: 1000, tier: "Hadiah Fisik" },
-    { id: "R8", name: "Mainan besar / wishlist (Rp 150–300rb)", points: 1500, tier: "Hadiah Fisik" }
-];
-
-// ================= FUNGSI SISTEM =================
-function getIconForCategory(category) {
-    const cat = category.toLowerCase();
-    if (cat.includes('rumah')) return 'home-outline';
-    if (cat.includes('akademik') || cat.includes('belajar') || cat.includes('diri')) return 'book-outline';
-    if (cat.includes('screen')) return 'tv-outline';
-    if (cat.includes('makanan') || cat.includes('jajan')) return 'fast-food-outline';
-    if (cat.includes('fisik') || cat.includes('mainan')) return 'game-controller-outline';
-    return 'star-outline';
-}
-
-function groupBy(array, key) {
-    return array.reduce((result, currentValue) => {
-        const groupKey = currentValue[key] || 'Lainnya';
-        (result[groupKey] = result[groupKey] || []).push(currentValue);
-        return result;
-    }, {});
-}
-
-async function initApp() {
-    try {
-        const usersSnapshot = await getDocs(collection(db, "users"));
-        
-        if (usersSnapshot.empty) {
-            await forceResetData();
-            return;
+    <style>
+        :root {
+            --ios-blue: #007AFF;
+            --ios-bg: #F2F2F7;
+            --ios-text: #1C1C1E;
+            --ios-gray: #8E8E93;
+            --ios-red: #FF3B30;
+            --glass-bg: rgba(255, 255, 255, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.4);
         }
 
-        usersData = [];
-        usersSnapshot.forEach((doc) => usersData.push({id: doc.id, ...doc.data()}));
-        renderUserSelection();
-    } catch (error) {
-        console.error("Error mengambil data:", error);
-        alert("Gagal terhubung ke Database. Periksa konfigurasi Firebase.");
-    }
-}
-
-window.forceResetData = async function() {
-    if (!confirm("Tindakan ini menghapus data lama dan menggantinya dengan daftar tugas/hadiah default. Lanjutkan?")) return;
-    
-    try {
-        for (const user of initialUsers) await setDoc(doc(db, "users", user.id), user);
-        for (const task of initialTasks) await setDoc(doc(db, "tasks", task.id), task);
-        for (const reward of initialRewards) await setDoc(doc(db, "rewards", reward.id), reward);
-        
-        alert("Data diatur ulang. Halaman akan dimuat kembali.");
-        location.reload();
-    } catch (e) {
-        alert("Gagal mengatur ulang data: " + e.message);
-    }
-};
-
-function renderUserSelection() {
-    const container = document.getElementById("user-selection");
-    container.innerHTML = "";
-    usersData.forEach(user => {
-        const btn = document.createElement("button");
-        btn.className = "glass-panel";
-        btn.style.display = "flex";
-        btn.style.alignItems = "center";
-        btn.style.justifyContent = "flex-start";
-        btn.style.gap = "15px";
-        btn.style.padding = "20px";
-        btn.style.marginBottom = "10px";
-        btn.style.width = "100%";
-        btn.style.color = "#1C1C1E";
-        
-        let iconName = user.role === 'admin' ? 'person-circle-outline' : 'happy-outline';
-        
-        btn.innerHTML = `<ion-icon name="${iconName}" style="font-size: 32px; color: #007AFF;"></ion-icon> 
-                         <span style="font-size: 18px; font-weight: 600;">${user.name}</span>`;
-        btn.onclick = () => showPinScreen(user);
-        container.appendChild(btn);
-    });
-}
-
-let selectedUserForLogin = null;
-window.showPinScreen = function(user) {
-    selectedUserForLogin = user;
-    document.getElementById("user-selection").classList.add("hidden");
-    document.getElementById("pin-section").classList.remove("hidden");
-    document.getElementById("login-name").innerText = `Login sebagai ${user.name}`;
-    document.getElementById("pin-input").focus();
-};
-
-window.resetLogin = function() {
-    selectedUserForLogin = null;
-    document.getElementById("pin-input").value = "";
-    document.getElementById("user-selection").classList.remove("hidden");
-    document.getElementById("pin-section").classList.add("hidden");
-};
-
-window.verifyPin = function() {
-    const pin = document.getElementById("pin-input").value;
-    if (pin === selectedUserForLogin.pin) {
-        currentUser = selectedUserForLogin;
-        loadDashboard();
-    } else {
-        alert("PIN Salah!");
-    }
-};
-
-window.logout = function() {
-    currentUser = null;
-    resetLogin();
-    document.getElementById("main-screen").classList.remove("active");
-    document.getElementById("main-screen").classList.add("hidden");
-    document.getElementById("login-screen").classList.add("active");
-    document.getElementById("login-screen").classList.remove("hidden");
-};
-
-function loadDashboard() {
-    document.getElementById("login-screen").classList.remove("active");
-    document.getElementById("login-screen").classList.add("hidden");
-    document.getElementById("main-screen").classList.remove("hidden");
-    document.getElementById("main-screen").classList.add("active");
-    document.getElementById("welcome-text").innerText = `Halo, ${currentUser.name.split(' ')[0]}`;
-
-    if (currentUser.role === "admin") {
-        document.getElementById("admin-view").classList.remove("hidden");
-        document.getElementById("member-view").classList.add("hidden");
-        switchAdminTab('approval');
-        listenToPendingTasks();
-        loadAdminCatalog();
-    } else {
-        document.getElementById("admin-view").classList.add("hidden");
-        document.getElementById("member-view").classList.remove("hidden");
-        listenToUserPoints();
-        loadMemberTasksAndRewards();
-    }
-}
-
-// ================= FITUR MEMBER (ANAK) =================
-function listenToUserPoints() {
-    onSnapshot(doc(db, "users", currentUser.id), (docSnap) => {
-        if(docSnap.exists()) document.getElementById("user-points").innerText = docSnap.data().points;
-    });
-}
-
-async function loadMemberTasksAndRewards() {
-    const taskContainer = document.getElementById("tasks-list");
-    taskContainer.innerHTML = "<p>Memuat...</p>";
-    
-    onSnapshot(collection(db, "tasks"), (snapshot) => {
-        const tasks = [];
-        snapshot.forEach(docSnap => tasks.push({id: docSnap.id, ...docSnap.data()}));
-        const groupedTasks = groupBy(tasks, 'category');
-        
-        taskContainer.innerHTML = "";
-        for (const [category, items] of Object.entries(groupedTasks).sort()) {
-            let icon = getIconForCategory(category);
-            let html = `<details><summary><span style="display:flex; align-items:center; gap:8px;"><ion-icon name="${icon}"></ion-icon> ${category}</span></summary><div class="details-content card-grid">`;
-            items.forEach(task => {
-                html += `
-                <div class="card">
-                    <div class="card-info">
-                        <div class="card-icon"><ion-icon name="${icon}"></ion-icon></div>
-                        <div class="card-text">
-                            <strong>${task.name}</strong>
-                            <small>${task.points} Poin</small>
-                        </div>
-                    </div>
-                    <button onclick="claimTask('${task.id}', '${task.name.replace(/'/g, "\\'")}', ${task.points})">Klaim</button>
-                </div>`;
-            });
-            html += `</div></details>`;
-            taskContainer.innerHTML += html;
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+            background-color: var(--ios-bg);
+            color: var(--ios-text);
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
         }
-    });
 
-    const rewardContainer = document.getElementById("rewards-list");
-    rewardContainer.innerHTML = "<p>Memuat...</p>";
-    
-    onSnapshot(collection(db, "rewards"), (snapshot) => {
-        const rewards = [];
-        snapshot.forEach(docSnap => rewards.push({id: docSnap.id, ...docSnap.data()}));
-        const groupedRewards = groupBy(rewards, 'tier');
-        
-        rewardContainer.innerHTML = "";
-        for (const [tier, items] of Object.entries(groupedRewards).sort()) {
-            let icon = getIconForCategory(tier);
-            let html = `<details><summary><span style="display:flex; align-items:center; gap:8px;"><ion-icon name="${icon}"></ion-icon> ${tier}</span></summary><div class="details-content card-grid">`;
-            items.forEach(reward => {
-                html += `
-                <div class="card">
-                    <div class="card-info">
-                        <div class="card-icon"><ion-icon name="${icon}"></ion-icon></div>
-                        <div class="card-text">
-                            <strong>${reward.name}</strong>
-                            <small>${reward.points} Poin</small>
-                        </div>
-                    </div>
-                    <button onclick="redeemReward('${reward.name.replace(/'/g, "\\'")}', ${reward.points})">Tukar</button>
-                </div>`;
-            });
-            html += `</div></details>`;
-            rewardContainer.innerHTML += html;
+        /* Latar Belakang Pastel Blur */
+        .blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(60px);
+            z-index: -1;
+            opacity: 0.7;
         }
-    });
-}
+        .blob-1 { top: -10%; left: -10%; width: 350px; height: 350px; background: #FFD1FF; } 
+        .blob-2 { bottom: -10%; right: -10%; width: 400px; height: 400px; background: #D1E8FF; } 
+        .blob-3 { top: 40%; left: 50%; width: 250px; height: 250px; background: #E2D1FF; transform: translate(-50%, -50%); } 
 
-window.claimTask = async function(taskId, taskName, points) {
-    if (confirm(`Klaim tugas: ${taskName}?`)) {
-        await addDoc(collection(db, "task_logs"), {
-            userId: currentUser.id,
-            userName: currentUser.name,
-            taskId: taskId,
-            taskName: taskName,
-            points: points,
-            status: "pending",
-            timestamp: new Date()
-        });
-        alert("Tugas diajukan. Menunggu persetujuan.");
-    }
-};
-
-window.redeemReward = async function(rewardName, pointsCost) {
-    if (confirm(`Tukar ${pointsCost} poin untuk: ${rewardName}?`)) {
-        const userRef = doc(db, "users", currentUser.id);
-        const userDoc = await getDoc(userRef);
-        const currentPoints = userDoc.data().points;
-
-        if (currentPoints >= pointsCost) {
-            await updateDoc(userRef, { points: currentPoints - pointsCost });
-            alert(`Berhasil menukar poin dengan: ${rewardName}.`);
-        } else {
-            alert(`Poin tidak cukup.`);
+        .app-container {
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
         }
-    }
-};
 
-// ================= FITUR ADMIN =================
-window.switchAdminTab = function(tab) {
-    if(tab === 'approval') {
-        document.getElementById("admin-approval-section").classList.remove("hidden");
-        document.getElementById("admin-manage-section").classList.add("hidden");
-        document.getElementById("btn-tab-approval").classList.add("active");
-        document.getElementById("btn-tab-manage").classList.remove("active");
-    } else {
-        document.getElementById("admin-approval-section").classList.add("hidden");
-        document.getElementById("admin-manage-section").classList.remove("hidden");
-        document.getElementById("btn-tab-approval").classList.remove("active");
-        document.getElementById("btn-tab-manage").classList.add("active");
-    }
-}
+        .screen { display: none; animation: fadeIn 0.3s ease; }
+        .screen.active { display: block; }
+        .hidden { display: none !important; }
 
-function listenToPendingTasks() {
-    const q = query(collection(db, "task_logs"), where("status", "==", "pending"));
-    onSnapshot(q, (snapshot) => {
-        const container = document.getElementById("pending-tasks-list");
-        container.innerHTML = "";
-        if(snapshot.empty) container.innerHTML = "<div class='glass-panel'><p style='text-align:center; color:#8E8E93;'>Tidak ada tugas tertunda.</p></div>";
-        
-        snapshot.forEach((docSnap) => {
-            const log = docSnap.data();
-            const div = document.createElement("div");
-            div.className = "card";
-            div.style.flexDirection = "column";
-            div.style.alignItems = "flex-start";
-            div.innerHTML = `
-                <div class="card-info" style="margin-bottom: 15px; width: 100%;">
-                    <div class="card-icon"><ion-icon name="time-outline"></ion-icon></div>
-                    <div class="card-text">
-                        <strong>${log.userName}</strong>
-                        <small>${log.taskName} (+${log.points} Poin)</small>
-                    </div>
-                </div>
-                <div style="display:flex; gap:10px; width:100%;">
-                    <button class="primary-btn" style="flex:1; margin:0;" onclick="approveTask('${docSnap.id}', '${log.userId}', ${log.points})">Setuju</button>
-                    <button class="danger" style="flex:1;" onclick="rejectTask('${docSnap.id}')">Tolak</button>
-                </div>
-            `;
-            container.appendChild(div);
-        });
-    });
-}
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-window.approveTask = async function(logId, userId, points) {
-    await updateDoc(doc(db, "task_logs", logId), { status: "approved" });
-    const userRef = doc(db, "users", userId);
-    const userDoc = await getDoc(userRef);
-    await updateDoc(userRef, { points: userDoc.data().points + points });
-};
+        /* Header & Tipografi */
+        .header-ios { text-align: center; margin-bottom: 30px; margin-top: 20px; }
+        .header-ios h2 { margin: 0; font-size: 28px; font-weight: 700; }
+        .header-ios p { margin: 5px 0 0 0; color: var(--ios-gray); }
 
-window.rejectTask = async function(logId) {
-    if(confirm("Tolak klaim tugas ini?")) {
-        await updateDoc(doc(db, "task_logs", logId), { status: "rejected" });
-    }
-};
+        .main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; margin-top: 10px;}
+        .main-header h2 { margin: 0; font-size: 28px; font-weight: 700; }
+        .section-title { font-size: 18px; font-weight: 600; margin-bottom: 12px; margin-left: 5px; color: var(--ios-text); }
 
-// --- CRUD KELOLA DATA & PENALTI ---
-function loadAdminCatalog() {
-    const container = document.getElementById("admin-catalog-list");
-    
-    // Formulir Penalti & Tombol Reset
-    container.innerHTML = `
-        <button class="danger" style="margin-bottom:20px; width:100%;" onclick="forceResetData()">⚠️ Reset Semua Data ke Default</button>
-        
-        <h3 class="section-title">Kurangi Poin Anak (Penalti)</h3>
-        <div class="glass-panel" style="margin-bottom:30px; border: 1px solid #FF3B30;">
-            <select id="penalty-user-id" style="width:100%; padding:14px; margin-bottom:12px; border-radius:12px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.5); font-size:16px; outline:none;">
-                <option value="">-- Pilih Anak --</option>
-                <option value="u3">Zafira</option>
-                <option value="u4">Kaivan</option>
-            </select>
-            <input type="number" id="penalty-points" placeholder="Jumlah Poin Dikurangi (mis: 20)">
-            <input type="text" id="penalty-reason" placeholder="Alasan (Wajib diisi)">
-            <button onclick="applyPenalty()" class="primary-btn" style="background:#FF3B30; margin-bottom:0;">
-                <ion-icon name="alert-circle-outline"></ion-icon> Terapkan Penalti
-            </button>
+        /* Glassmorphism Panel (Kaca Buram) */
+        .glass-panel, .card, details {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            overflow: hidden;
+        }
+
+        .glass-panel { padding: 20px; }
+        .card-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+
+        /* Komponen Kartu */
+        .card {
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: transform 0.2s;
+        }
+        .card-info { display: flex; align-items: center; gap: 12px; }
+        .card-icon { font-size: 24px; color: var(--ios-blue); background: rgba(0, 122, 255, 0.1); padding: 8px; border-radius: 12px;}
+        .card-text strong { display: block; font-size: 16px; margin-bottom: 4px; }
+        .card-text small { color: var(--ios-gray); font-size: 14px; font-weight: 500; }
+
+        /* Kartu Saldo (Apple Wallet Style) */
+        .wallet-card {
+            background: linear-gradient(135deg, #A2B2EE 0%, #E3B5E8 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 20px;
+            margin-bottom: 25px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(162, 178, 238, 0.4);
+        }
+        .wallet-card p { margin: 0; font-size: 15px; opacity: 0.9; font-weight: 500; }
+        .wallet-card h1 { margin: 5px 0 0 0; font-size: 42px; font-weight: 700; letter-spacing: 1px; }
+        .wallet-icon { position: absolute; right: -20px; bottom: -20px; font-size: 120px; opacity: 0.15; }
+
+        /* Menu Lipat iOS */
+        details { margin-bottom: 12px; }
+        summary {
+            padding: 16px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.4);
+        }
+        summary::-webkit-details-marker { display: none; }
+        summary::after { content: "\2304"; font-size: 20px; color: var(--ios-gray); transition: transform 0.3s;}
+        details[open] summary::after { transform: rotate(180deg); }
+        .details-content { padding: 16px; background: rgba(255,255,255,0.2); border-top: 1px solid var(--glass-border); }
+
+        /* Tombol */
+        button {
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        button:active { transform: scale(0.95); opacity: 0.8; }
+        .primary-btn { background: var(--ios-blue); color: white; width: 100%; margin-bottom: 10px; padding: 14px;}
+        .secondary-btn { background: #E5E5EA; color: var(--ios-text); width: 100%; padding: 14px;}
+        .card button { background: #E5E5EA; color: var(--ios-blue); padding: 8px 14px; font-size: 14px; }
+        .card button.danger { background: #FFD4D4; color: var(--ios-red); }
+        .icon-btn { background: var(--glass-bg); color: var(--ios-text); border: 1px solid var(--glass-border); padding: 10px; border-radius: 50%; font-size: 20px;}
+
+        /* Input Form */
+        input[type="text"], input[type="number"], input[type="password"], select {
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid var(--glass-border);
+            padding: 14px;
+            font-size: 16px;
+            width: 100%;
+            margin-bottom: 12px;
+            box-sizing: border-box;
+            border-radius: 12px;
+            outline: none;
+            transition: background 0.3s;
+        }
+        input:focus, select:focus { background: rgba(255, 255, 255, 0.9); border-color: var(--ios-blue); }
+
+        /* Segmented Control (Tab Admin) */
+        .segmented-control {
+            display: flex;
+            background: rgba(118, 118, 128, 0.12);
+            border-radius: 9px;
+            padding: 3px;
+            margin-bottom: 20px;
+        }
+        .segmented-control button {
+            flex: 1;
+            background: transparent;
+            color: var(--ios-text);
+            border-radius: 7px;
+            padding: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .segmented-control button.active {
+            background: white;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <!-- Latar Belakang Pastel Blur -->
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+
+    <div class="app-container">
+        <!-- Layar Login -->
+        <div id="login-screen" class="screen active">
+            <div class="header-ios">
+                <h2>Selamat Datang</h2>
+                <p>Pilih akun Anda</p>
+            </div>
+            <div id="user-selection" class="card-grid"></div>
+            
+            <div id="pin-section" class="hidden glass-panel">
+                <h3 id="login-name"></h3>
+                <input type="password" id="pin-input" placeholder="Masukkan PIN 4 Digit" maxlength="4" pattern="[0-9]*" inputmode="numeric">
+                <button onclick="verifyPin()" class="primary-btn">Masuk</button>
+                <button class="secondary-btn" onclick="resetLogin()">Batal</button>
+            </div>
         </div>
-    `;
 
-    const tasksHeader = document.createElement("h4");
-    tasksHeader.innerText = "Daftar Tugas";
-    tasksHeader.style.marginLeft = "5px";
-    container.appendChild(tasksHeader);
-    
-    const taskGrid = document.createElement("div");
-    taskGrid.className = "card-grid";
-    container.appendChild(taskGrid);
-
-    onSnapshot(collection(db, "tasks"), (snapshot) => {
-        taskGrid.innerHTML = "";
-        snapshot.forEach(docSnap => {
-            const t = docSnap.data();
-            taskGrid.innerHTML += `
-            <div class="card" style="flex-direction:column; align-items:flex-start;">
-                <div class="card-text" style="margin-bottom:10px;">
-                    <strong>${t.name}</strong>
-                    <small>${t.category} • ${t.points} Poin</small>
+        <!-- Layar Utama -->
+        <div id="main-screen" class="screen hidden">
+            <header class="main-header">
+                <div>
+                    <h2 id="welcome-text">Halo</h2>
                 </div>
-                <div style="display:flex; gap:10px; width:100%;">
-                    <button style="flex:1;" onclick="editData('tasks', '${docSnap.id}', '${t.name.replace(/'/g, "\\'")}', ${t.points}, '${t.category.replace(/'/g, "\\'")}')">Edit</button>
-                    <button class="danger" style="flex:1;" onclick="deleteData('tasks', '${docSnap.id}')">Hapus</button>
+                <button class="icon-btn" onclick="logout()">
+                    <ion-icon name="log-out-outline"></ion-icon>
+                </button>
+            </header>
+
+            <!-- TAMPILAN ADMIN -->
+            <div id="admin-view" class="hidden">
+                <div class="segmented-control">
+                    <button id="btn-tab-approval" class="active" onclick="switchAdminTab('approval')">
+                        <ion-icon name="checkmark-circle-outline"></ion-icon> Persetujuan
+                    </button>
+                    <button id="btn-tab-manage" onclick="switchAdminTab('manage')">
+                        <ion-icon name="settings-outline"></ion-icon> Kelola Data
+                    </button>
                 </div>
-            </div>`;
-        });
-    });
 
-    const rewardsHeader = document.createElement("h4");
-    rewardsHeader.innerText = "Daftar Hadiah";
-    rewardsHeader.style.marginLeft = "5px";
-    rewardsHeader.style.marginTop = "20px";
-    container.appendChild(rewardsHeader);
-
-    const rewardGrid = document.createElement("div");
-    rewardGrid.className = "card-grid";
-    container.appendChild(rewardGrid);
-
-    onSnapshot(collection(db, "rewards"), (snapshot) => {
-        rewardGrid.innerHTML = "";
-        snapshot.forEach(docSnap => {
-            const r = docSnap.data();
-            rewardGrid.innerHTML += `
-            <div class="card" style="flex-direction:column; align-items:flex-start;">
-                <div class="card-text" style="margin-bottom:10px;">
-                    <strong>${r.name}</strong>
-                    <small>${r.tier} • ${r.points} Poin</small>
+                <!-- Tab Persetujuan -->
+                <div id="admin-approval-section">
+                    <h3 class="section-title">Tugas Tertunda</h3>
+                    <div id="pending-tasks-list" class="card-grid"></div>
                 </div>
-                <div style="display:flex; gap:10px; width:100%;">
-                    <button style="flex:1;" onclick="editData('rewards', '${docSnap.id}', '${r.name.replace(/'/g, "\\'")}', ${r.points}, '${r.tier.replace(/'/g, "\\'")}')">Edit</button>
-                    <button class="danger" style="flex:1;" onclick="deleteData('rewards', '${docSnap.id}')">Hapus</button>
-                </div>
-            </div>`;
-        });
-    });
-}
 
-window.applyPenalty = async function() {
-    const userId = document.getElementById("penalty-user-id").value;
-    const pointsToDeduct = parseInt(document.getElementById("penalty-points").value);
-    const reason = document.getElementById("penalty-reason").value.trim();
+                <!-- Tab Kelola Data -->
+                <div id="admin-manage-section" class="hidden">
+                    <div id="admin-catalog-list"></div>
+                    
+                    <h3 class="section-title" style="margin-top: 30px;">Tambah Tugas Baru</h3>
+                    <div class="glass-panel" style="margin-bottom:20px;">
+                        <input type="text" id="new-task-name" placeholder="Nama Tugas">
+                        <input type="number" id="new-task-points" placeholder="Poin">
+                        <input type="text" id="new-task-category" placeholder="Kategori">
+                        <button onclick="addNewTask()" class="primary-btn"><ion-icon name="add-circle-outline"></ion-icon> Tambah Tugas</button>
+                    </div>
 
-    if (!userId) return alert("Pilih anak.");
-    if (isNaN(pointsToDeduct) || pointsToDeduct <= 0) return alert("Masukkan poin berupa angka.");
-    if (reason === "") return alert("Isi alasan penalti.");
-
-    if (confirm(`Kurangi ${pointsToDeduct} poin karena: "${reason}"?`)) {
-        try {
-            const userRef = doc(db, "users", userId);
-            const userDoc = await getDoc(userRef);
-            const currentPoints = userDoc.data().points;
-
-            let newPoints = currentPoints - pointsToDeduct;
-            if (newPoints < 0) newPoints = 0;
-
-            await updateDoc(userRef, { points: newPoints });
-
-            await addDoc(collection(db, "task_logs"), {
-                userId: userId,
-                userName: userDoc.data().name,
-                taskId: "PENALTY",
-                taskName: `PENALTI: ${reason}`,
-                points: -pointsToDeduct,
-                status: "approved",
-                timestamp: new Date()
-            });
-
-            alert(`Selesai. Sisa poin sekarang: ${newPoints}`);
-            document.getElementById("penalty-user-id").value = "";
-            document.getElementById("penalty-points").value = "";
-            document.getElementById("penalty-reason").value = "";
-        } catch (error) {
-            alert("Terjadi kesalahan.");
-        }
-    }
-};
-
-window.addNewTask = async function() {
-    const name = document.getElementById("new-task-name").value.trim();
-    const points = parseInt(document.getElementById("new-task-points").value);
-    const category = document.getElementById("new-task-category").value.trim() || "Lain-lain";
-    if (name === "" || isNaN(points)) return alert("Isi data dengan benar.");
-    await addDoc(collection(db, "tasks"), { name, points, category });
-    document.getElementById("new-task-name").value = "";
-    document.getElementById("new-task-points").value = "";
-    document.getElementById("new-task-category").value = "";
-};
-
-window.addNewReward = async function() {
-    const name = document.getElementById("new-reward-name").value.trim();
-    const points = parseInt(document.getElementById("new-reward-points").value);
-    const tier = document.getElementById("new-reward-tier").value.trim() || "Lain-lain";
-    if (name === "" || isNaN(points)) return alert("Isi data dengan benar.");
-    await addDoc(collection(db, "rewards"), { name, points, tier });
-    document.getElementById("new-reward-name").value = "";
-    document.getElementById("new-reward-points").value = "";
-    document.getElementById("new-reward-tier").value = "";
-};
-
-window.editData = async function(collectionName, id, oldName, oldPoints, oldGroup) {
-    const newName = prompt("Nama:", oldName);
-    if (newName === null || newName.trim() === "") return;
-    const newPoints = prompt("Poin:", oldPoints);
-    if (newPoints === null || isNaN(newPoints)) return;
-    const newGroup = prompt("Kategori/Tier:", oldGroup);
-    
-    const updateData = { name: newName.trim(), points: parseInt(newPoints) };
-    if (collectionName === "tasks") updateData.category = newGroup || "Lain-lain";
-    else updateData.tier = newGroup || "Lain-lain";
-
-    await updateDoc(doc(db, collectionName, id), updateData);
-};
-
-window.deleteData = async function(collectionName, id) {
-    if (confirm("Hapus item ini?")) {
-        await deleteDoc(doc(db, collectionName, id));
-    }
-};
-
-window.showHistory = async function() {
-    // Pindah layar
-    document.getElementById("main-screen").classList.add("hidden");
-    document.getElementById("main-screen").classList.remove("active");
-    document.getElementById("history-screen").classList.remove("hidden");
-    document.getElementById("history-screen").classList.add("active");
-
-    const container = document.getElementById("history-list");
-    container.innerHTML = "<p style='text-align:center;'>Memuat data...</p>";
-
-    // Ambil data log user saat ini
-    const q = query(collection(db, "task_logs"), where("userId", "==", currentUser.id));
-    const querySnapshot = await getDocs(q);
-    
-    let logs = [];
-    // Hitung batas waktu 7 hari ke belakang
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-    querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        const logDate = data.timestamp ? data.timestamp.toDate() : new Date();
-        // Saring hanya data 7 hari terakhir
-        if (logDate >= oneWeekAgo) {
-            logs.push({ ...data, logDate });
-        }
-    });
-
-    // Urutkan dari yang paling baru
-    logs.sort((a, b) => b.logDate - a.logDate);
-
-    container.innerHTML = "";
-    if (logs.length === 0) {
-        container.innerHTML = "<div class='glass-panel'><p style='text-align:center; color:#8E8E93;'>Belum ada aktivitas dalam 7 hari terakhir.</p></div>";
-        return;
-    }
-
-    logs.forEach(log => {
-        const isNegative = log.points < 0;
-        const pointColor = isNegative ? "#FF3B30" : "#34C759";
-        const sign = isNegative ? "" : "+"; // Angka negatif sudah memiliki tanda minus
-        const statusText = log.status === "pending" ? "<span style='color:#FF9500; font-size:12px; margin-left:5px;'>(Menunggu)</span>" : "";
-        
-        const div = document.createElement("div");
-        div.className = "card";
-        div.innerHTML = `
-            <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-                <div style="flex:1;">
-                    <strong style="display:block; font-size:15px; margin-bottom:4px;">${log.taskName} ${statusText}</strong>
-                    <small style="color:#8E8E93;">${log.logDate.toLocaleDateString('id-ID', {day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit'})}</small>
-                </div>
-                <div style="font-weight:bold; font-size:18px; color:${pointColor};">
-                    ${sign}${log.points}
+                    <h3 class="section-title">Tambah Hadiah Baru</h3>
+                    <div class="glass-panel" style="margin-bottom:20px;">
+                        <input type="text" id="new-reward-name" placeholder="Nama Hadiah">
+                        <input type="number" id="new-reward-points" placeholder="Harga Poin">
+                        <input type="text" id="new-reward-tier" placeholder="Tier">
+                        <button onclick="addNewReward()" class="primary-btn"><ion-icon name="add-circle-outline"></ion-icon> Tambah Hadiah</button>
+                    </div>
                 </div>
             </div>
-        `;
-        container.appendChild(div);
-    });
-};
 
-window.closeHistory = function() {    
-    // Kembali ke layar utama
-    document.getElementById("history-screen").classList.add("hidden");
-    document.getElementById("history-screen").classList.remove("active");
-    document.getElementById("main-screen").classList.remove("hidden");
-    document.getElementById("main-screen").classList.add("active");
-};
+            <!-- TAMPILAN ANAK -->
+            <div id="member-view" class="hidden">
+                <div class="wallet-card" onclick="showHistory()" style="cursor: pointer; transition: transform 0.2s;" onactive="this.style.transform='scale(0.95)'">
+                    <p>Saldo Poin Kamu (Klik untuk History)</p>
+                    <h1 id="user-points">0</h1>
+                    <ion-icon name="star" class="wallet-icon"></ion-icon>
+                </div>
+                
+                <h3 class="section-title">Tugas Tersedia</h3>
+                <div id="tasks-list"></div>
 
-initApp();
+                <h3 class="section-title" style="margin-top: 30px;">Katalog Hadiah</h3>
+                <div id="rewards-list"></div>
+            </div>
+        </div>
+
+        <!-- LAYAR HISTORY -->
+        <div id="history-screen" class="screen hidden">
+            <header class="main-header">
+                <div>
+                    <h2 style="font-size: 24px;">History 7 Hari</h2>
+                </div>
+                <button class="icon-btn" onclick="closeHistory()">
+                    <ion-icon name="close-outline"></ion-icon>
+                </button>
+            </header>
+            <div id="history-list" class="card-grid"></div>
+        </div>
+    </div>
+
+    <!-- SCRIPT APLIKASI (MENGGANTIKAN APP.JS) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, getDoc, doc, setDoc, addDoc, updateDoc, deleteDoc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        // Konfigurasi Firebase Anda
+        const firebaseConfig = {
+            apiKey: "AIzaSyBcG-UedQ9QVdznMPJIA-0YrJGHPEPBDSA",
+            authDomain: "freward-119b2.firebaseapp.com",
+            projectId: "freward-119b2",
+            storageBucket: "freward-119b2.firebasestorage.app",
+            messagingSenderId: "215497585199",
+            appId: "1:215497585199:web:b0c766cceb67ccc8814cda"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+        let usersData = [];
+
+        // ================= DATA AWAL =================
+        const initialUsers = [
+            { id: "u1", name: "Abi", role: "admin", pin: "3108", points: 0 },
+            { id: "u2", name: "Ummi", role: "admin", pin: "3108", points: 0 },
+            { id: "u3", name: "Zafira", role: "member", pin: "3333", points: 0 },
+            { id: "u4", name: "Kaivan", role: "member", pin: "4444", points: 0 }
+        ];
+
+        const initialTasks = [
+            { id: "T1", name: "Rapikan kasur, selimut & bantal", points: 5, category: "Pekerjaan Rumah Tangga" },
+            { id: "T2", name: "Lap meja makan", points: 3, category: "Pekerjaan Rumah Tangga" },
+            { id: "T3", name: "Rapikan meja belajar", points: 5, category: "Pekerjaan Rumah Tangga" },
+            { id: "T4", name: "Cuci gelas & piring milik sendiri", points: 3, category: "Pekerjaan Rumah Tangga" },
+            { id: "T5", name: "Lap cermin wastafel", points: 5, category: "Pekerjaan Rumah Tangga" },
+            { id: "T6", name: "Rapikan barang berserakan di ruang tamu", points: 5, category: "Pekerjaan Rumah Tangga" },
+            { id: "T7", name: "Buang sampah", points: 6, category: "Pekerjaan Rumah Tangga" },
+            { id: "T8", name: "Sapu ruang tamu / 1 ruangan", points: 6, category: "Pekerjaan Rumah Tangga" },
+            { id: "T9", name: "Pel 1 ruangan", points: 10, category: "Pekerjaan Rumah Tangga" },
+            { id: "T10", name: "Cuci piring keluarga 1x makan", points: 15, category: "Pekerjaan Rumah Tangga" },
+            { id: "T11", name: "Sapu seluruh rumah", points: 18, category: "Pekerjaan Rumah Tangga" },
+            { id: "T12", name: "Pel seluruh rumah", points: 20, category: "Pekerjaan Rumah Tangga" },
+            { id: "T13", name: "Bersihkan kamar mandi lengkap", points: 25, category: "Pekerjaan Rumah Tangga" },
+            { id: "T14", name: "Membaca buku 30 menit", points: 15, category: "Akademik & Pengembangan Diri" },
+            { id: "T15", name: "Membaca buku 1 jam", points: 30, category: "Akademik & Pengembangan Diri" },
+            { id: "T16", name: "Belajar mandiri 30 menit (tanpa disuruh)", points: 15, category: "Akademik & Pengembangan Diri" },
+            { id: "T17", name: "Belajar mandiri 1 jam (tanpa disuruh)", points: 30, category: "Akademik & Pengembangan Diri" },
+            { id: "T18", name: "Berenang 1 jam", points: 50, category: "Akademik & Pengembangan Diri" },
+            { id: "T19", name: "Jogging 1 Jam", points: 30, category: "Akademik & Pengembangan Diri" },
+            { id: "T20", name: "Exercise 15 menit", points: 10, category: "Akademik & Pengembangan Diri" },
+            { id: "T21", name: "Belajar alat musik 30 menit", points: 15, category: "Akademik & Pengembangan Diri" },
+            { id: "T22", name: "Nilai ulangan 95-100", points: 20, category: "Bonus Akademik" }
+        ];
+
+        const initialRewards = [
+            { id: "R1", name: "Nonton YouTube 30 menit", points: 20, tier: "Screen Time" },
+            { id: "R2", name: "Main game 30 menit", points: 25, tier: "Screen Time" },
+            { id: "R3", name: "Coding 30 menit", points: 15, tier: "Screen Time" },
+            { id: "R4", name: "Snack / jajan pilihan sendiri (< Rp 15rb)", points: 50, tier: "Makanan & Jajan" },
+            { id: "R5", name: "Jajan agak besar (Rp 15–30rb)", points: 100, tier: "Makanan & Jajan" },
+            { id: "R6", name: "Mainan kecil (< Rp 50rb)", points: 500, tier: "Hadiah Fisik" },
+            { id: "R7", name: "Mainan sedang (Rp 50–150rb)", points: 1000, tier: "Hadiah Fisik" },
+            { id: "R8", name: "Mainan besar / wishlist (Rp 150–300rb)", points: 1500, tier: "Hadiah Fisik" }
+        ];
+
+        // ================= FUNGSI SISTEM =================
+        function getIconForCategory(category) {
+            const cat = category.toLowerCase();
+            if (cat.includes('rumah')) return 'home-outline';
+            if (cat.includes('akademik') || cat.includes('belajar') || cat.includes('diri')) return 'book-outline';
+            if (cat.includes('screen')) return 'tv-outline';
+            if (cat.includes('makanan') || cat.includes('jajan')) return 'fast-food-outline';
+            if (cat.includes('fisik') || cat.includes('mainan')) return 'game-controller-outline';
+            return 'star-outline';
+        }
+
+        function groupBy(array, key) {
+            return array.reduce((result, currentValue) => {
+                const groupKey = currentValue[key] || 'Lainnya';
+                (result[groupKey] = result[groupKey] || []).push(currentValue);
+                return result;
+            }, {});
+        }
+
+        async function initApp() {
+            try {
+                const usersSnapshot = await getDocs(collection(db, "users"));
+                if (usersSnapshot.empty) {
+                    await forceResetData();
+                    return;
+                }
+
+                usersData = [];
+                usersSnapshot.forEach((doc) => usersData.push({id: doc.id, ...doc.data()}));
+                renderUserSelection();
+            } catch (error) {
+                console.error("Error mengambil data:", error);
+                alert("Gagal terhubung ke Database. Periksa konfigurasi Firebase.");
+            }
+        }
+
+        window.forceResetData = async function() {
+            if (!confirm("Tindakan ini menghapus data lama dan menggantinya dengan daftar tugas/hadiah default. Lanjutkan?")) return;
+            
+            try {
+                for (const user of initialUsers) await setDoc(doc(db, "users", user.id), user);
+                for (const task of initialTasks) await setDoc(doc(db, "tasks", task.id), task);
+                for (const reward of initialRewards) await setDoc(doc(db, "rewards", reward.id), reward);
+                
+                alert("Data diatur ulang. Halaman akan dimuat kembali.");
+                location.reload();
+            } catch (e) {
+                alert("Gagal mengatur ulang data: " + e.message);
+            }
+        };
+
+        function renderUserSelection() {
+            const container = document.getElementById("user-selection");
+            container.innerHTML = "";
+            usersData.forEach(user => {
+                const btn = document.createElement("button");
+                btn.className = "glass-panel";
+                btn.style.display = "flex";
+                btn.style.alignItems = "center";
+                btn.style.justifyContent = "flex-start";
+                btn.style.gap = "15px";
+                btn.style.padding = "20px";
+                btn.style.marginBottom = "10px";
+                btn.style.width = "100%";
+                btn.style.color = "#1C1C1E";
+                
+                let iconName = user.role === 'admin' ? 'person-circle-outline' : 'happy-outline';
+                
+                btn.innerHTML = `<ion-icon name="${iconName}" style="font-size: 32px; color: #007AFF;"></ion-icon> 
+                                 <span style="font-size: 18px; font-weight: 600;">${user.name}</span>`;
+                btn.onclick = () => showPinScreen(user);
+                container.appendChild(btn);
+            });
+        }
+
+        window.showPinScreen = function(user) {
+            window.selectedUserForLogin = user;
+            document.getElementById("user-selection").classList.add("hidden");
+            document.getElementById("pin-section").classList.remove("hidden");
+            document.getElementById("login-name").innerText = `Login sebagai ${user.name}`;
+            document.getElementById("pin-input").focus();
+        };
+
+        window.resetLogin = function() {
+            window.selectedUserForLogin = null;
+            document.getElementById("pin-input").value = "";
+            document.getElementById("user-selection").classList.remove("hidden");
+            document.getElementById("pin-section").classList.add("hidden");
+        };
+
+        window.verifyPin = function() {
+            const pin = document.getElementById("pin-input").value;
+            if (pin === window.selectedUserForLogin.pin) {
+                currentUser = window.selectedUserForLogin;
+                loadDashboard();
+            } else {
+                alert("PIN Salah!");
+            }
+        };
+
+        window.logout = function() {
+            currentUser = null;
+            resetLogin();
+            document.getElementById("main-screen").classList.remove("active");
+            document.getElementById("main-screen").classList.add("hidden");
+            document.getElementById("login-screen").classList.add("active");
+            document.getElementById("login-screen").classList.remove("hidden");
+        };
+
+        function loadDashboard() {
+            document.getElementById("login-screen").classList.remove("active");
+            document.getElementById("login-screen").classList.add("hidden");
+            document.getElementById("main-screen").classList.remove("hidden");
+            document.getElementById("main-screen").classList.add("active");
+            document.getElementById("welcome-text").innerText = `Halo, ${currentUser.name.split(' ')[0]}`;
+
+            if (currentUser.role === "admin") {
+                document.getElementById("admin-view").classList.remove("hidden");
+                document.getElementById("member-view").classList.add("hidden");
+                window.switchAdminTab('approval');
+                listenToPendingTasks();
+                loadAdminCatalog();
+            } else {
+                document.getElementById("admin-view").classList.add("hidden");
+                document.getElementById("member-view").classList.remove("hidden");
+                listenToUserPoints();
+                loadMemberTasksAndRewards();
+            }
+        }
+
+        // ================= FITUR MEMBER (ANAK) =================
+        function listenToUserPoints() {
+            onSnapshot(doc(db, "users", currentUser.id), (docSnap) => {
+                if(docSnap.exists()) document.getElementById("user-points").innerText = docSnap.data().points;
+            });
+        }
+
+        async function loadMemberTasksAndRewards() {
+            const taskContainer = document.getElementById("tasks-list");
+            taskContainer.innerHTML = "<p>Memuat...</p>";
+            
+            onSnapshot(collection(db, "tasks"), (snapshot) => {
+                const tasks = [];
+                snapshot.forEach(docSnap => tasks.push({id: docSnap.id, ...docSnap.data()}));
+                const groupedTasks = groupBy(tasks, 'category');
+                
+                taskContainer.innerHTML = "";
+                for (const [category, items] of Object.entries(groupedTasks).sort()) {
+                    let icon = getIconForCategory(category);
+                    let html = `<details><summary><span style="display:flex; align-items:center; gap:8px;"><ion-icon name="${icon}"></ion-icon> ${category}</span></summary><div class="details-content card-grid">`;
+                    items.forEach(task => {
+                        html += `
+                        <div class="card">
+                            <div class="card-info">
+                                <div class="card-icon"><ion-icon name="${icon}"></ion-icon></div>
+                                <div class="card-text">
+                                    <strong>${task.name}</strong>
+                                    <small>${task.points} Poin</small>
+                                </div>
+                            </div>
+                            <button onclick="claimTask('${task.id}', '${task.name.replace(/'/g, "\\'")}', ${task.points})">Klaim</button>
+                        </div>`;
+                    });
+                    html += `</div></details>`;
+                    taskContainer.innerHTML += html;
+                }
+            });
+
+            const rewardContainer = document.getElementById("rewards-list");
+            rewardContainer.innerHTML = "<p>Memuat...</p>";
+            
+            onSnapshot(collection(db, "rewards"), (snapshot) => {
+                const rewards = [];
+                snapshot.forEach(docSnap => rewards.push({id: docSnap.id, ...docSnap.data()}));
+                const groupedRewards = groupBy(rewards, 'tier');
+                
+                rewardContainer.innerHTML = "";
+                for (const [tier, items] of Object.entries(groupedRewards).sort()) {
+                    let icon = getIconForCategory(tier);
+                    let html = `<details><summary><span style="display:flex; align-items:center; gap:8px;"><ion-icon name="${icon}"></ion-icon> ${tier}</span></summary><div class="details-content card-grid">`;
+                    items.forEach(reward => {
+                        html += `
+                        <div class="card">
+                            <div class="card-info">
+                                <div class="card-icon"><ion-icon name="${icon}"></ion-icon></div>
+                                <div class="card-text">
+                                    <strong>${reward.name}</strong>
+                                    <small>${reward.points} Poin</small>
+                                </div>
+                            </div>
+                            <button onclick="redeemReward('${reward.name.replace(/'/g, "\\'")}', ${reward.points})">Tukar</button>
+                        </div>`;
+                    });
+                    html += `</div></details>`;
+                    rewardContainer.innerHTML += html;
+                }
+            });
+        }
+
+        window.claimTask = async function(taskId, taskName, points) {
+            if (confirm(`Klaim tugas: ${taskName}?`)) {
+                await addDoc(collection(db, "task_logs"), {
+                    userId: currentUser.id,
+                    userName: currentUser.name,
+                    taskId: taskId,
+                    taskName: taskName,
+                    points: points,
+                    status: "pending",
+                    timestamp: new Date()
+                });
+                alert("Tugas diajukan. Menunggu persetujuan.");
+            }
+        };
+
+        window.redeemReward = async function(rewardName, pointsCost) {
+            if (confirm(`Tukar ${pointsCost} poin untuk: ${rewardName}?`)) {
+                const userRef = doc(db, "users", currentUser.id);
+                const userDoc = await getDoc(userRef);
+                const currentPoints = userDoc.data().points;
+
+                if (currentPoints >= pointsCost) {
+                    await updateDoc(userRef, { points: currentPoints - pointsCost });
+                    
+                    // Catat pengeluaran poin ke history
+                    await addDoc(collection(db, "task_logs"), {
+                        userId: currentUser.id,
+                        userName: currentUser.name,
+                        taskId: "REWARD",
+                        taskName: `Tukar: ${rewardName}`,
+                        points: -pointsCost,
+                        status: "approved",
+                        timestamp: new Date()
+                    });
+
+                    alert(`Berhasil menukar poin dengan: ${rewardName}.`);
+                } else {
+                    alert(`Poin tidak cukup.`);
+                }
+            }
+        };
+
+        // ================= FITUR ADMIN =================
+        window.switchAdminTab = function(tab) {
+            if(tab === 'approval') {
+                document.getElementById("admin-approval-section").classList.remove("hidden");
+                document.getElementById("admin-manage-section").classList.add("hidden");
+                document.getElementById("btn-tab-approval").classList.add("active");
+                document.getElementById("btn-tab-manage").classList.remove("active");
+            } else {
+                document.getElementById("admin-approval-section").classList.add("hidden");
+                document.getElementById("admin-manage-section").classList.remove("hidden");
+                document.getElementById("btn-tab-approval").classList.remove("active");
+                document.getElementById("btn-tab-manage").classList.add("active");
+            }
+        }
+
+        function listenToPendingTasks() {
+            const q = query(collection(db, "task_logs"), where("status", "==", "pending"));
+            onSnapshot(q, (snapshot) => {
+                const container = document.getElementById("pending-tasks-list");
+                container.innerHTML = "";
+                if(snapshot.empty) container.innerHTML = "<div class='glass-panel'><p style='text-align:center; color:#8E8E93;'>Tidak ada tugas tertunda.</p></div>";
+                
+                snapshot.forEach((docSnap) => {
+                    const log = docSnap.data();
+                    const div = document.createElement("div");
+                    div.className = "card";
+                    div.style.flexDirection = "column";
+                    div.style.alignItems = "flex-start";
+                    div.innerHTML = `
+                        <div class="card-info" style="margin-bottom: 15px; width: 100%;">
+                            <div class="card-icon"><ion-icon name="time-outline"></ion-icon></div>
+                            <div class="card-text">
+                                <strong>${log.userName}</strong>
+                                <small>${log.taskName} (+${log.points} Poin)</small>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:10px; width:100%;">
+                            <button class="primary-btn" style="flex:1; margin:0;" onclick="approveTask('${docSnap.id}', '${log.userId}', ${log.points})">Setuju</button>
+                            <button class="danger" style="flex:1;" onclick="rejectTask('${docSnap.id}')">Tolak</button>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            });
+        }
+
+        window.approveTask = async function(logId, userId, points) {
+            await updateDoc(doc(db, "task_logs", logId), { status: "approved" });
+            const userRef = doc(db, "users", userId);
+            const userDoc = await getDoc(userRef);
+            await updateDoc(userRef, { points: userDoc.data().points + points });
+        };
+
+        window.rejectTask = async function(logId) {
+            if(confirm("Tolak klaim tugas ini?")) {
+                await updateDoc(doc(db, "task_logs", logId), { status: "rejected" });
+            }
+        };
+
+        function loadAdminCatalog() {
+            const container = document.getElementById("admin-catalog-list");
+            
+            container.innerHTML = `
+                <div style="display:flex; gap:10px; margin-bottom:20px; width:100%;">
+                    <button class="primary-btn" style="flex:1; margin-bottom:0;" onclick="backupData()"><ion-icon name="download-outline"></ion-icon> Unduh Backup Data</button>
+                    <button class="danger" style="flex:1; margin-bottom:0;" onclick="forceResetData()">⚠️ Reset ke Default</button>
+                </div>
+                
+                <h3 class="section-title">Kurangi Poin Anak (Penalti)</h3>
+                <div class="glass-panel" style="margin-bottom:30px; border: 1px solid #FF3B30;">
+                    <select id="penalty-user-id">
+                        <option value="">-- Pilih Anak --</option>
+                        <option value="u3">Zafira</option>
+                        <option value="u4">Kaivan</option>
+                    </select>
+                    <input type="number" id="penalty-points" placeholder="Jumlah Poin Dikurangi (mis: 20)">
+                    <input type="text" id="penalty-reason" placeholder="Alasan (Wajib diisi)">
+                    <button onclick="applyPenalty()" class="primary-btn" style="background:#FF3B30; margin-bottom:0;">
+                        <ion-icon name="alert-circle-outline"></ion-icon> Terapkan Penalti
+                    </button>
+                </div>
+            `;
+
+            const tasksHeader = document.createElement("h4");
+            tasksHeader.innerText = "Daftar Tugas";
+            tasksHeader.style.marginLeft = "5px";
+            container.appendChild(tasksHeader);
+            
+            const taskGrid = document.createElement("div");
+            taskGrid.className = "card-grid";
+            container.appendChild(taskGrid);
+
+            onSnapshot(collection(db, "tasks"), (snapshot) => {
+                taskGrid.innerHTML = "";
+                snapshot.forEach(docSnap => {
+                    const t = docSnap.data();
+                    taskGrid.innerHTML += `
+                    <div class="card" style="flex-direction:column; align-items:flex-start;">
+                        <div class="card-text" style="margin-bottom:10px;">
+                            <strong>${t.name}</strong>
+                            <small>${t.category} • ${t.points} Poin</small>
+                        </div>
+                        <div style="display:flex; gap:10px; width:100%;">
+                            <button style="flex:1;" onclick="editData('tasks', '${docSnap.id}', '${t.name.replace(/'/g, "\\'")}', ${t.points}, '${t.category.replace(/'/g, "\\'")}')">Edit</button>
+                            <button class="danger" style="flex:1;" onclick="deleteData('tasks', '${docSnap.id}')">Hapus</button>
+                        </div>
+                    </div>`;
+                });
+            });
+
+            const rewardsHeader = document.createElement("h4");
+            rewardsHeader.innerText = "Daftar Hadiah";
+            rewardsHeader.style.marginLeft = "5px";
+            rewardsHeader.style.marginTop = "20px";
+            container.appendChild(rewardsHeader);
+
+            const rewardGrid = document.createElement("div");
+            rewardGrid.className = "card-grid";
+            container.appendChild(rewardGrid);
+
+            onSnapshot(collection(db, "rewards"), (snapshot) => {
+                rewardGrid.innerHTML = "";
+                snapshot.forEach(docSnap => {
+                    const r = docSnap.data();
+                    rewardGrid.innerHTML += `
+                    <div class="card" style="flex-direction:column; align-items:flex-start;">
+                        <div class="card-text" style="margin-bottom:10px;">
+                            <strong>${r.name}</strong>
+                            <small>${r.tier} • ${r.points} Poin</small>
+                        </div>
+                        <div style="display:flex; gap:10px; width:100%;">
+                            <button style="flex:1;" onclick="editData('rewards', '${docSnap.id}', '${r.name.replace(/'/g, "\\'")}', ${r.points}, '${r.tier.replace(/'/g, "\\'")}')">Edit</button>
+                            <button class="danger" style="flex:1;" onclick="deleteData('rewards', '${docSnap.id}')">Hapus</button>
+                        </div>
+                    </div>`;
+                });
+            });
+        }
+
+        window.applyPenalty = async function() {
+            const userId = document.getElementById("penalty-user-id").value;
+            const pointsToDeduct = parseInt(document.getElementById("penalty-points").value);
+            const reason = document.getElementById("penalty-reason").value.trim();
+
+            if (!userId) return alert("Pilih anak.");
+            if (isNaN(pointsToDeduct) || pointsToDeduct <= 0) return alert("Masukkan poin berupa angka.");
+            if (reason === "") return alert("Isi alasan penalti.");
+
+            if (confirm(`Kurangi ${pointsToDeduct} poin karena: "${reason}"?`)) {
+                try {
+                    const userRef = doc(db, "users", userId);
+                    const userDoc = await getDoc(userRef);
+                    const currentPoints = userDoc.data().points;
+
+                    let newPoints = currentPoints - pointsToDeduct;
+                    if (newPoints < 0) newPoints = 0;
+
+                    await updateDoc(userRef, { points: newPoints });
+
+                    await addDoc(collection(db, "task_logs"), {
+                        userId: userId,
+                        userName: userDoc.data().name,
+                        taskId: "PENALTY",
+                        taskName: `PENALTI: ${reason}`,
+                        points: -pointsToDeduct,
+                        status: "approved",
+                        timestamp: new Date()
+                    });
+
+                    alert(`Selesai. Sisa poin sekarang: ${newPoints}`);
+                    document.getElementById("penalty-user-id").value = "";
+                    document.getElementById("penalty-points").value = "";
+                    document.getElementById("penalty-reason").value = "";
+                } catch (error) {
+                    alert("Terjadi kesalahan.");
+                }
+            }
+        };
+
+        window.addNewTask = async function() {
+            const name = document.getElementById("new-task-name").value.trim();
+            const points = parseInt(document.getElementById("new-task-points").value);
+            const category = document.getElementById("new-task-category").value.trim() || "Lain-lain";
+            if (name === "" || isNaN(points)) return alert("Isi data dengan benar.");
+            await addDoc(collection(db, "tasks"), { name, points, category });
+            document.getElementById("new-task-name").value = "";
+            document.getElementById("new-task-points").value = "";
+            document.getElementById("new-task-category").value = "";
+        };
+
+        window.addNewReward = async function() {
+            const name = document.getElementById("new-reward-name").value.trim();
+            const points = parseInt(document.getElementById("new-reward-points").value);
+            const tier = document.getElementById("new-reward-tier").value.trim() || "Lain-lain";
+            if (name === "" || isNaN(points)) return alert("Isi data dengan benar.");
+            await addDoc(collection(db, "rewards"), { name, points, tier });
+            document.getElementById("new-reward-name").value = "";
+            document.getElementById("new-reward-points").value = "";
+            document.getElementById("new-reward-tier").value = "";
+        };
+
+        window.editData = async function(collectionName, id, oldName, oldPoints, oldGroup) {
+            const newName = prompt("Nama:", oldName);
+            if (newName === null || newName.trim() === "") return;
+            const newPoints = prompt("Poin:", oldPoints);
+            if (newPoints === null || isNaN(newPoints)) return;
+            const newGroup = prompt("Kategori/Tier:", oldGroup);
+            
+            const updateData = { name: newName.trim(), points: parseInt(newPoints) };
+            if (collectionName === "tasks") updateData.category = newGroup || "Lain-lain";
+            else updateData.tier = newGroup || "Lain-lain";
+
+            await updateDoc(doc(db, collectionName, id), updateData);
+        };
+
+        window.deleteData = async function(collectionName, id) {
+            if (confirm("Hapus item ini?")) {
+                await deleteDoc(doc(db, collectionName, id));
+            }
+        };
+
+        // ================= FITUR BACKUP =================
+        window.backupData = async function() {
+            try {
+                const collectionsToBackup = ["users", "tasks", "rewards", "task_logs"];
+                let backupObj = {};
+                
+                alert("Memproses backup data. Mohon tunggu sebentar...");
+
+                for (const colName of collectionsToBackup) {
+                    const snap = await getDocs(collection(db, colName));
+                    backupObj[colName] = [];
+                    snap.forEach(docSnap => {
+                        backupObj[colName].push({ id: docSnap.id, ...docSnap.data() });
+                    });
+                }
+
+                // Ubah objek menjadi string JSON
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupObj, null, 2));
+                
+                // Buat elemen anchor untuk memicu unduhan
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+                
+                // Beri nama berkas dengan tanggal hari ini
+                const dateString = new Date().toISOString().split('T')[0];
+                downloadAnchorNode.setAttribute("download", `backup_reward_keluarga_${dateString}.json`);
+                
+                document.body.appendChild(downloadAnchorNode); // Diperlukan untuk Firefox
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+                
+            } catch (error) {
+                console.error("Error saat backup:", error);
+                alert("Gagal melakukan backup data.");
+            }
+        };
+
+        // ================= FITUR HISTORY =================
+        window.showHistory = async function() {
+            document.getElementById("main-screen").classList.add("hidden");
+            document.getElementById("main-screen").classList.remove("active");
+            document.getElementById("history-screen").classList.remove("hidden");
+            document.getElementById("history-screen").classList.add("active");
+
+            const container = document.getElementById("history-list");
+            container.innerHTML = "<p style='text-align:center;'>Memuat data...</p>";
+
+            const q = query(collection(db, "task_logs"), where("userId", "==", currentUser.id));
+            const querySnapshot = await getDocs(q);
+            
+            let logs = [];
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                const logDate = data.timestamp ? data.timestamp.toDate() : new Date();
+                if (logDate >= oneWeekAgo) {
+                    logs.push({ ...data, logDate });
+                }
+            });
+
+            logs.sort((a, b) => b.logDate - a.logDate);
+
+            container.innerHTML = "";
+            if (logs.length === 0) {
+                container.innerHTML = "<div class='glass-panel'><p style='text-align:center; color:#8E8E93;'>Belum ada aktivitas dalam 7 hari terakhir.</p></div>";
+                return;
+            }
+
+            logs.forEach(log => {
+                const isNegative = log.points < 0;
+                const pointColor = isNegative ? "#FF3B30" : "#34C759";
+                const sign = isNegative ? "" : "+";
+                const statusText = log.status === "pending" ? "<span style='color:#FF9500; font-size:12px; margin-left:5px;'>(Menunggu)</span>" : "";
+                
+                const div = document.createElement("div");
+                div.className = "card";
+                div.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                        <div style="flex:1;">
+                            <strong style="display:block; font-size:15px; margin-bottom:4px;">${log.taskName} ${statusText}</strong>
+                            <small style="color:#8E8E93;">${log.logDate.toLocaleDateString('id-ID', {day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit'})}</small>
+                        </div>
+                        <div style="font-weight:bold; font-size:18px; color:${pointColor};">
+                            ${sign}${log.points}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        };
+
+        window.closeHistory = function() {
+            document.getElementById("history-screen").classList.add("hidden");
+            document.getElementById("history-screen").classList.remove("active");
+            document.getElementById("main-screen").classList.remove("hidden");
+            document.getElementById("main-screen").classList.add("active");
+        };
+
+        // Mulai Aplikasi
+        initApp();
+    </script>
+</body>
+</html>
